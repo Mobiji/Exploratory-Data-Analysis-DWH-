@@ -1,1 +1,72 @@
+/*
+=============================================================================================================
+		DIMENSIONS EXPLORATION
+=============================================================================================================
+*/
 
+/*
+	- Here, I went ahead to explore some of the dimension columns in the dimension tables in order to have
+	  an idea about the cardinality of the dimension fields. I specifically explored the dimension columns
+      which have low cardinality.
+	- This is useful because it is going to give me insights on how I can group up my data.
+    
+    clause used: 'distinct' + [Dimension]
+*/
+
+/*
+=============================================================================================================
+        'dim.customers' dimensions exploration
+=============================================================================================================
+*/
+
+select *
+from gold.dim_customers;
+
+select distinct country
+from gold.dim_customers;
+-- Result: 6 distinct countries.
+-- This shows the geographical spread of my data. The business has customers from 6 different countries.
+
+select distinct gender
+from gold.dim_customers;
+-- Result: 2 distinct genders. Both Male and Female.
+
+select distinct marital_status
+from gold.dim_customers;
+-- Result: 2 distinct results. Both Married and Single.
+/*
+=============================================================================================================
+*/
+
+/*
+=============================================================================================================
+        'dim.products' dimensions exploration
+=============================================================================================================
+*/
+
+select *
+from gold.dim_products;
+
+select distinct category
+from gold.dim_products;
+-- Result: 4 distinct categories.
+
+select count(distinct subcategory)
+from gold.dim_products;
+-- Result: 37 distinct subcategories.
+
+select count(distinct product_number)
+from gold.dim_products;
+-- Result: 295 distinct products.
+
+select distinct maintenance
+from gold.dim_products;
+-- Result: Some products require maintenance while others do not require maintenance.
+
+select distinct production_line
+from gold.dim_products;
+-- Result: 4 distinct production lines.
+
+/*
+=============================================================================================================
+*/
