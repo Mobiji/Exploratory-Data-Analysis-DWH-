@@ -1,7 +1,7 @@
 /*
-==================================================================================================================
+==============================================================================================================================
 		MEASURES EXPLORATION
-==================================================================================================================
+==============================================================================================================================
 */
 
 /*
@@ -18,19 +18,19 @@ from gold.fact_sales;
 select sum(sales_amount)
 from gold.fact_sales;
 -- Result: 29,356,250 total revenue.
--- ===============================================================================================================
+-- ===========================================================================================================================
 
 -- Find how many items are sold
 select sum(quantity)
 from gold.fact_sales;
 -- Result: 60,423 total items sold
--- ===============================================================================================================
+-- ===========================================================================================================================
 
 -- Find the average selling price
 select sum(sales_amount) / sum(quantity) Avg_Price
 from gold.fact_sales;
 -- Result: 485.85 (This means that the business is selling fairly expensive items).
--- ===============================================================================================================
+-- ===========================================================================================================================
 
 -- Find the total number of orders
 /* 
@@ -41,7 +41,7 @@ from gold.fact_sales;
 select count(distinct order_number)
 from gold.fact_sales;
 -- Result: 27,659 total distinct orders in the business.
--- ===============================================================================================================
+-- ===========================================================================================================================
 
 -- Find the total number of registered products in the business.
 select count(distinct product_name)
@@ -55,7 +55,7 @@ from gold.fact_sales FS
 left join gold.dim_products DP
 	on FS.product_key = DP.product_key;
 -- Result: The business was able to sell a total of 130 distinct products out of 295 total registered products.
--- ===============================================================================================================
+-- ===========================================================================================================================
 
 -- Find the total number of registered customers in the business.
 select count(distinct customer_id)
@@ -96,7 +96,8 @@ where customer_name = 'Jordan King';
 
 So the REAL number of distinct customers who placed an order is actually all the registered customers which is 18,484.
 */
--- ===============================================================================================================
+-- ===========================================================================================================================
+
 /* 	
 	Now I want to go ahead and aggregate all these big numbers of the business into a single output (a report) so that
 	it becomes easy to see the business in numbers quickly and more effciently.
@@ -130,7 +131,43 @@ select 	'Customers That Have Placed An Order', count(distinct DC.customer_id)
 from gold.fact_sales FS
 left join gold.dim_customers DC
 	on FS.customer_key = DC.customer_key;
+-- ===========================================================================================================================
+
+-- I will go ahead to place the above report in a stored procedure in order to access this info easier in future if need be.
+
+Delimiter $$
+	create procedure Business_Metrics ()
+		begin
+			select 'Total Revenue' as 'Metric', sum(sales_amount) Measure_Value
+			from gold.fact_sales
+			union all
+			select 'Total Items Sold', sum(quantity)
+			from gold.fact_sales
+			union all
+			select 'Average Selling Price', round(sum(sales_amount) / sum(quantity), 0) Avg_Price
+			from gold.fact_sales
+			union all
+			select 'Total Orders', count(distinct order_number)
+			from gold.fact_sales
+			union all
+			select 'Total  Registerd Products', count(distinct product_name)
+			from gold.dim_products
+			union all
+			select 	'Products Actually Bought', count(distinct DP.product_name) dst_prducts
+			from gold.fact_sales FS
+			left join gold.dim_products DP
+				on FS.product_key = DP.product_key
+			union all
+			select 'Total Registred Customers', count(distinct customer_id)
+			from gold.dim_customers
+			union all
+			select 	'Customers That Have Placed An Order', count(distinct DC.customer_id)
+			from gold.fact_sales FS
+			left join gold.dim_customers DC
+				on FS.customer_key = DC.customer_key;
+		end $$
+Delimiter ;
 
 /*
-==================================================================================================================
+==============================================================================================================================
 */
