@@ -8,14 +8,9 @@
 	- Here, I went ahead to explore the metrics of the business. (The big numbers of the business).
 	- The highest level of aggregation or the lowest level of details in the business.
     
-    clauses used: summation [Measure]
+    clauses used: Aggregate function [Measure]
 */
 
-/*
-==================================================================================================================
-        'fact_sales' exploration
-==================================================================================================================
-*/
 select *
 from gold.fact_sales;
 
