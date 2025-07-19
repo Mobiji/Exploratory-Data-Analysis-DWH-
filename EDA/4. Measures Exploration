@@ -1,1 +1,99 @@
+/*
+==================================================================================================================
+		MEASURES EXPLORATION
+==================================================================================================================
+*/
 
+/*
+	- Here, I went ahead to explore the metrics of the business. (The big numbers of the business).
+	- The highest level of aggregation or the lowest level of details in the business.
+    
+    clauses used: summation [Measure]
+*/
+
+/*
+==================================================================================================================
+        'fact_sales' exploration
+==================================================================================================================
+*/
+select *
+from gold.fact_sales;
+
+-- Find the total sales
+select sum(sales_amount)
+from gold.fact_sales;
+-- Result: 29,356,250
+-- ===============================================================================================================
+
+-- Find how many items are sold
+select sum(quantity)
+from gold.fact_sales;
+-- Result: 60,423 total items sold
+-- ===============================================================================================================
+
+-- Find the average selling price
+select sum(sales_amount) / sum(quantity) Avg_Price
+from gold.fact_sales;
+-- Result: 485.85
+-- ===============================================================================================================
+
+-- Find the total number of orders
+/* 
+	- Keeping in mind that a single order might contain multiple items, one cannot go and directly 
+      use count(order_number). 'count (distinct order_number)' will capture the real figure.
+*/
+
+select count(distinct order_number)
+from gold.fact_sales;
+-- Result: 27,659 total distinct orders in the business.
+-- ===============================================================================================================
+
+-- Find the total number of distinct products sold
+
+select 	count(distinct DP.product_name) dst_prducts
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key;
+-- Result: The business was able to sell a total of 130 distinct products out of 295 total registered products.
+-- ===============================================================================================================
+
+-- Find the total number of customers who placed an order
+
+select 	count(distinct DC.customer_name)
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key;
+/*
+	- Result: The business was able to sell to a total of 18,399 distinct customers out of 18484 total registered customers.
+    - This is inaccurate given that duplicates had already been removed prior to this data entering the gold layer.
+	- So where/who are the other 85 customers?
+    
+select customer_name
+from gold.dim_customers
+where customer_name not in (select distinct customer_name 
+from gold.dim_customers);
+
+	- Result: NIL. This is impossible because the above query should be able to display the missing 85 customers.
+    - So I decided to run the following query to see the duplicates:
+
+select customer_name, count(*)
+from gold.dim_customers
+group by customer_name
+having count(*) > 1;
+		
+        - Result: Multiple records with duplicates as per their 'customer_name' column.
+        - I then decided to investigate further by isolating one of the customer names that had a duplicate:
+        
+select *
+from gold.dim_customers
+where customer_name = 'Jordan King';
+
+		- Result: 'Jordan King' is a customer name belonging to 2 distinct customers coming from different countries.
+        - So the missing 85 customers are not duplicates but are customers who APPARENTLY share full names.
+
+So the REAL number of distinct customers who placed an order is actually all the registered customers which is 18,484.
+*/
+
+/*
+==================================================================================================================
+*/
