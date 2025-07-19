@@ -1,1 +1,62 @@
+/*
+==================================================================================================================
+		DATE EXPLORATION
+==================================================================================================================
+*/
 
+/*
+	- Here, I went ahead to explore the boundaries of the date columns that the views have in order to 
+	  get an idea about the timespan. (The difference between the earliest and latest dates).
+	- This is useful because it is going to give me insights on how I can do different types of time analysis.
+    
+    clauses used: 'MIN'/'MAX' + [Date Dimension]
+				  timestampdiff('Year'/'Month'/'day', 'MIN date', 'MAX date')
+*/
+
+/*
+==================================================================================================================
+        'dim.customers' exploration
+==================================================================================================================
+*/
+
+select *
+from gold.dim_customers;
+
+select 	min(birth_date) oldest_birthdate,
+		timestampdiff(year, min(birth_date), now()) `Oldest customer's age`,
+		max(birth_date) youngest_birthdate,
+        timestampdiff(year, max(birth_date), now()) `Youngest customer's age`,
+        min(register_date) 1st_customer,
+        timestampdiff(month, min(register_date), now()) `1st customer's duration`,
+        max(register_date) latest_customer,
+        timestampdiff(month, max(register_date), now()) `latest customer's duration`
+from gold.dim_customers;
+-- Results: The oldest customer is 109 years old while the youngest is only 39.
+/*
+==================================================================================================================
+*/
+
+/*
+==================================================================================================================
+        'fact_sales' exploration
+==================================================================================================================
+*/
+select *
+from gold.fact_sales;
+
+select 	min(order_date) `Earliest Order`,
+		max(order_date) `Latest date`,
+        timestampdiff(month, min(order_date), max(order_date)) `Orders lifespan`
+from gold.fact_sales;
+-- Result: The business has run for a period of 36 total months/3 years.
+
+select 	order_number, 
+		timestampdiff(day, order_date, shipping_date) `Delivery Duraton`
+from gold.fact_sales;
+-- Result: 7 days for each order.
+/*	
+	Apparently, all ordered products took exactly 7 days to be delivered to their respective customers. This 
+	indicates that the business can absolutely be trusted to deliver a product on the exact day it indicates.
+/*
+==================================================================================================================
+*/
