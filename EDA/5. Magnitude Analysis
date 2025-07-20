@@ -17,7 +17,7 @@ select country, count(customer_id) Total_Customers
 from gold.dim_customers
 group by country
 order by Total_Customers desc;
--- Result: The majority of the businesses customers come from the United States.
+-- Result: The majority of the businesses customers come from the United States (7482).
 -- There are 337 customers who dont have their country information.
 -- ==============================================================================================================================
 
@@ -28,6 +28,13 @@ from gold.dim_customers
 group by gender;
 -- Result: The customers are almost grouped 50:50 in the business with the males slightly edging over the females.
 -- There are 15 customers who have their gender value as 'n/a'. 
+-- ==============================================================================================================================
+
+-- Find the total number of customers by marital status.
+select marital_status, count(customer_id) Total_Customers
+from gold.dim_customers
+group by marital_status;
+-- Result: The business is largely comprised of customers who are married (54% of the total).
 -- ==============================================================================================================================
 
 -- Find the total number of products by category.
@@ -82,7 +89,7 @@ order by Total_Revenue desc;
 -- ==============================================================================================================================
 
 -- What is the distribution of sold items across countries ?
-select DC.country, count(quantity) Total_Quantity_Sold, sum(FS.sales_amount) Total_Revenue
+select DC.country, sum(quantity) Total_Quantity_Sold, sum(FS.sales_amount) Total_Revenue
 from gold.fact_sales FS
 left join gold.dim_customers DC
 	on FS.customer_key = DC.customer_key
@@ -90,8 +97,8 @@ group by DC.country
 order by Total_Quantity_Sold desc;
 
 /*
-	- United States leads this one with 20473 total products being sold to her.
-    - On the other hand, France was the least consumer of the businesses products with 5558 total purchased products
+	- United States leads this one with 20481 total products being sold to her.
+    - On the other hand, France was the least consumer of the businesses products with 5559 total purchased products.
 */
 
 /*
