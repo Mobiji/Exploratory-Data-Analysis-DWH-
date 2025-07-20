@@ -1,1 +1,82 @@
+/*
+=================================================================================================================================
+		RANKING (TOP N & BOTTOM N) ANALYSIS
+=================================================================================================================================
+*/
 
+/*
+	- Here, I am going to order the values of the dimensions either ascending/descending to get the best and worst performers.
+      
+	Clause used: Rank [Dimension] by [Measure]
+			  i.e.  - Rank countries by total sales,
+					- Top 5 products by quantity, 
+                    - Bottom 5 customers by total orders etc.
+*/
+
+-- Which 5 products generate the highest revenue ?
+select 	DP.product_name, DP.category, DP.production_line, DP.maintenance, sum(sales_amount) TotalRev_generated,
+		dense_rank() over(order by sum(sales_amount) desc) Ranking
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.product_name, DP.category, DP.production_line, DP.maintenance
+limit 5;
+
+/*
+	- The 'Mountain-200' bike is the biggest revenue generator in the business.
+      (specifically the 'Black-46' with a total revenue of about 1.37 million)
+*/
+-- ==============================================================================================================================
+
+-- What are the 5 worst-performing products in terms of sales ?
+select 	DP.product_name, DP.category, DP.production_line, DP.maintenance, sum(sales_amount) TotalRev_generated,
+		dense_rank() over(order by sum(sales_amount)) Ranking
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.product_name, DP.category, DP.production_line, DP.maintenance
+limit 5;
+/*
+	- The worst performing product in terms of total revenue generated is 'Racing Socks- L' with 2430 in total sales.
+*/
+-- ==============================================================================================================================
+
+-- Which category generates the highest revenue ?
+select DP.category, sum(sales_amount) TotalRev_generated
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.category
+order by TotalRev_generated desc
+limit 1;
+-- Result: 'Bikes' is the largest revenue generator in the business.
+-- ==============================================================================================================================
+
+-- Which category generates the lowest revenue ?
+select DP.category, sum(sales_amount) TotalRev_generated
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.category
+order by TotalRev_generated
+limit 1;
+-- Result: 'Clothing' is the least revenue generator in the business.
+-- ==============================================================================================================================
+
+-- Find the top 3 customers with the most orders placed.
+select 	DC.customer_id, DC.customer_name, DC.country, DC.gender, DC.marital_status,
+		count(distinct order_number) Total_Orders_Placed,
+        sum(FS.sales_amount) Total_Revenue,
+        dense_rank() over(order by count(distinct order_number) desc, sum(FS.sales_amount) desc) Ranking
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key
+group by DC.customer_id, DC.customer_name, DC.country, DC.gender, DC.marital_status
+limit 3;
+-- The customer 'Mason Roberts' from Canada has placed the most orders in the business.
+-- This doesn't directly mean that he generated the most revenue for the business.
+-- ==============================================================================================================================
+
+/*
+=================================================================================================================================
+*/
