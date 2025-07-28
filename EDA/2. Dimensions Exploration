@@ -49,11 +49,11 @@ from gold.dim_products;
 
 select distinct category
 from gold.dim_products;
--- Result: 4 distinct categories.
+-- Result: 4 distinct categories. (Good candidate for grouping).
 
 select count(distinct subcategory)
 from gold.dim_products;
--- Result: 37 distinct subcategories.
+-- Result: 37 distinct subcategories. (Also a good candidate for grouping).
 
 select count(distinct product_number)
 from gold.dim_products;
@@ -65,7 +65,7 @@ from gold.dim_products;
 
 select distinct production_line
 from gold.dim_products;
--- Result: 4 distinct production lines.
+-- Result: 4 distinct production lines. (Good candidate for grouping).
 
 /*
 =============================================================================================================
