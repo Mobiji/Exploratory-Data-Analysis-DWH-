@@ -1,7 +1,7 @@
 /*
-======================================================================================================================
+============================================================================================================================
 		DATABASE EXPLORATION
-======================================================================================================================
+============================================================================================================================
 */
 /* 
 		- My source system is a schema called 'gold'. So I used a system schema called information schema to see 
@@ -12,14 +12,14 @@ select *
 from information_schema.tables
 where TABLE_SCHEMA = 'gold';
 
--- My objects are in the form of views.
+-- My objects are in the form of views and there are 3 views in total that I am going to be carrying out my analysis on.
 
 /*
-======================================================================================================================
+============================================================================================================================
 */
 
 /*
-	- Next, I used the query below to further understand the gold schema.
+	- Next, I used the query below to further understand the 3 views that are in the gold schema.
     - The query gives futher details about the columns in our views, what type they are, if they are nullable
       or not, their ordinal positions inside the views and also the data type of the data in each of the columns.
 */
@@ -28,5 +28,5 @@ from information_schema.columns
 where TABLE_SCHEMA = 'gold';
 
 /*
-======================================================================================================================
+============================================================================================================================
 */
