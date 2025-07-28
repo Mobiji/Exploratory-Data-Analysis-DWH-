@@ -27,6 +27,33 @@ select *
 from information_schema.columns
 where TABLE_SCHEMA = 'gold';
 
+select count(*)
+from gold.fact_sales;
+
+select *
+from gold.fact_sales;
+-- For our first view 'fact_sales', it has a shape of 60398 rows x 9 columns with no unique row identifier.
+-- This view is also a fact.
+-- =====================================================================================================================
+
+select count(*)
+from gold.dim_customers;
+
+select *
+from gold.dim_customers;
+-- For our second view 'dim_customers', it has a shape of 18484 rows x 9 columns with multiple unique identifiers(3).
+-- This view is also a dimension.
+-- =====================================================================================================================
+
+select count(*)
+from gold.dim_products;
+
+select *
+from gold.dim_products;
+-- For our third view 'dim_products', it has a shape of 295 rows x 11 columns with multiple unique identifiers(4).
+-- This view is also a dimension.
+-- =====================================================================================================================
+
 /*
 ============================================================================================================================
 */
