@@ -6,7 +6,7 @@
 /* 
 		- My source system is a schema called 'gold'. So I used a system schema called information schema to see 
           what are the contents of this gold schema and to also know the type of objects in this schema.
-          (If my objects are tables or views and how many object I will be dealing with)
+          (If my objects are tables or views and how many objects I will be dealing with)
 */
 select *
 from information_schema.tables
