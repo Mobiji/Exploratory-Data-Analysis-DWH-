@@ -8,7 +8,7 @@
 	- Here, I went ahead to explore some of the dimension columns in the dimension tables in order to have
 	  an idea about the cardinality of the dimension fields. I specifically explored the dimension columns
       which have low cardinality.
-	- This is useful because it is going to give me insights on how I can group up my data.
+	- This is useful because it is going to give me ideas on how I can group up my data.
     
     clause used: 'distinct' + [Dimension]
 */
