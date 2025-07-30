@@ -5,7 +5,7 @@
 */
 
 /*
-	- Here, I went ahead to explore the metrics of the business. (The big numbers of the business).
+	- Here, I went ahead to explore the key metrics of the business. (The big numbers of the business).
 	- The highest level of aggregation or the lowest level of details in the business.
     
     clause used: Aggregate function [Measure]
@@ -54,7 +54,11 @@ select 	count(distinct DP.product_name) dst_prducts
 from gold.fact_sales FS
 left join gold.dim_products DP
 	on FS.product_key = DP.product_key;
--- Result: The business was able to sell a total of 130 distinct products out of 295 total registered products.
+/* 	Result: The business was able to sell a total of 130 distinct products out of 295 total registered products (44%).
+	This suggests that the larger share of registrered products are inactive in terms of revenue generation which might be as
+    a result of poor marketing or the products may be obsolete. This reveals potential for product optimization or
+    merchandising review in order to optimize or retire poor performers.
+*/	
 -- ===========================================================================================================================
 
 -- Find the total number of registered customers in the business.
@@ -70,31 +74,35 @@ left join gold.dim_customers DC
 	- Result: The business was able to sell to a total of 18,399 distinct customers out of 18484 total registered customers.
     - This is inaccurate given that duplicates had already been removed prior to this data entering the gold layer.
 	- So where/who are the other 85 customers?
-    
+*/
+   
 select customer_name
 from gold.dim_customers
 where customer_name not in (select distinct customer_name 
 from gold.dim_customers);
-
+/*
 	- Result: NIL. This is impossible because the above query should be able to display the missing 85 customers.
     - So I decided to run the following query to see the duplicates:
+*/
 
 select customer_name, count(*)
 from gold.dim_customers
 group by customer_name
 having count(*) > 1;
-		
+/*
         - Result: Multiple records with duplicates as per their 'customer_name' column.
         - I then decided to investigate further by isolating one of the customer names that had a duplicate:
-        
+*/        
 select *
 from gold.dim_customers
 where customer_name = 'Jordan King';
-
+/*
 		- Result: 'Jordan King' is a customer name belonging to 2 distinct customers coming from different countries.
         - So the missing 85 customers are not duplicates but are customers who APPARENTLY share full names.
 
 So the REAL number of distinct customers who placed an order is actually all the registered customers which is 18,484.
+This is 100% conversion rate which is usally highly unlikely. It might be that only actual buyers are being recorded.
+(i.e. the gold.dim_customers table may only contain customers who have made at least one purchase).
 */
 -- ===========================================================================================================================
 
