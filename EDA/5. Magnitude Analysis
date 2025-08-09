@@ -1,11 +1,11 @@
 /*
-=================================================================================================================================
+=======================================================================================================================================================================
 		MAGNITUDE EXPLORATION
-=================================================================================================================================
+=======================================================================================================================================================================
 */
 
 /*
-	- Here, I am going to compare the measures by the different categories/dimensions. This will help me understand the
+	- Here, I am going to compare the measures by the different various dimension fields. This will help me understand the
       importance of the various dimensions.
       
 	Clause used: aggregate [Measure] by [Dimension]
@@ -19,7 +19,7 @@ group by country
 order by Total_Customers desc;
 -- Result: The majority of the businesses customers come from the United States (7482).
 -- There are 337 customers who dont have their country information.
--- ==============================================================================================================================
+-- ====================================================================================================================================================================
 
 
 -- Find the total number of customers by gender.
@@ -27,80 +27,389 @@ select gender, count(customer_id) No_of_customers
 from gold.dim_customers
 group by gender;
 -- Result: The customers are almost grouped 50:50 in the business with the males slightly edging over the females.
--- There are 15 customers who have their gender value as 'n/a'. 
--- ==============================================================================================================================
+-- There are 15 customers whose gender is unknown. 
+
+-- Analyze average revenue per customer by gender
+select 	gender,
+		count(distinct FS.customer_key) no_of_cust,
+		avg(sales_amount) Avg_amount
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key
+group by gender;
+-- Result: 	Females have a slightly higher average spend per customer than males despite the males being more than the females.
+-- 			'n/a' customers though very few, spend nearly double the average. This could indicate:
+-- 			High-value but incomplete profiles, possibly due to B2B-type accounts or system imports.
+-- 			It’s worth auditing these customer records to investigate further.
+
+-- Insight: Consider micro-targeted campaigns(loyalty programs) toward female customers especially if high-value products align with their preferences.
+
+-- Explore product category preference by gender.
+with cte_name as
+(select 	DP.category,
+		gender,
+		count(FS.product_key) no_of_cust,
+        sum(FS.sales_amount) Revenue
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.category, gender
+order by DP.category)
+select *
+from cte_name
+union all
+select 'Components', 'Female', 0, 0
+union all
+select 'Components', 'Male', 0, 0
+union all
+select 'Components', 'n/a', 0, 0;
+/*
+Result: 	
+	- Bikes dominate the revenue share across both genders — making it the CORE product category.
+	- Accessories and clothing, while popular in terms of number of customers, contribute relatively little revenue.
+	- No sales at all in the 'Components' category, which could point to: Data entry issues, products listed but not sold or discontinued lines.
+*/
+/*
+Insights:
+	- Use Bikes as flagship items in seasonal campaigns or bundled promotions.
+	- Evaluate Accessories and Clothing as add-on opportunities or discount targets for cart value growth. (Bundle with bikes).
+	- Investigate the Components category in the source systems. Is it inactive, missing SKUs, or just underperforming?
+*/
+
+-- Look at geographical spread of gender to detect regional targeting patterns.
+
+select 	DC.country,
+		DC.gender,
+		count(distinct FS.customer_key) no_of_cust,
+        sum(FS.sales_amount) Revenue
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DC.country, DC.gender
+order by DC.country;
+/*
+Result:
+	- The U.S. and Australia are the most lucrative markets, with both genders having near-equal engagement and high revenues.
+	- In Germany, female customers have a slight edge in revenue even though males are more in number.
+	- Both France and Canada show a balanced gender split.
+	- The n/a country entries need cleansing — they dilute geographical reporting and possibly affect strategy planning.
+*/
+
+/*
+Insights:
+	- Targeted marketing can be done regionally by gender, especially in: 	
+		Australia (high revenue.)
+		U.S. (top revenue contributor.)
+	- Investigate data issues for customers with n/a country (Consulting the source system experts).
+*/
+
+-- Examine repeat purchase rate by gender.
+select 
+  gender,
+  count(distinct customer_key) as total_customers,
+  sum(case when order_count > 1 then 1 else 0 end) as repeat_customers,
+  round(100 * sum(case when order_count > 1 then 1 else 0 end) / count(distinct customer_key), 2) as repeat_purchase_rate_pct
+from (
+    select 
+        DC.gender,
+        FS.customer_key,
+        count(distinct FS.order_date) as order_count
+    from gold.fact_sales FS
+    left join gold.dim_customers DC
+        on FS.customer_key = DC.customer_key
+    group by DC.gender, FS.customer_key
+) repeat_analysis
+group by gender;
+
+/*
+Result:
+	- Female customers have a slightly higher repeat purchase rate than males — suggesting better brand loyalty or satisfaction.
+	- The repeat rate is low (6.67%) for customers with unspecified gender, reinforcing the idea that incomplete profiles may indicate non-retained or one-off buyers.
+	- The repeat rate for both males and females is fairly solid, sitting around 36–38%, which is healthy in retail/e-commerce contexts.
+*/
+
+/*
+Insights:
+	- Female customers are more likely to return so the business can consider targeted retention campaigns (eg. loyalty points, early access to sales) for this group.
+*/
+-- ====================================================================================================================================================================
 
 -- Find the total number of customers by marital status.
-select marital_status, count(customer_id) Total_Customers
+with cte_name as
+(select marital_status, count(customer_id) Gender_Total
 from gold.dim_customers
+group by marital_status)
+
+select marital_status, Gender_Total, sum(Gender_Total) over() Total_Customers,
+		round((Gender_Total/sum(Gender_Total) over()) * 100, 2) Percentage
+from cte_name;
+-- Result: The customer base is largely comprised of customers who are married (54% of the total).
+/*
+Insights:
+	- Personalized Marketing Campaigns:
+		*. The business can tailor promotional messages based on lifestyle assumptions.
+			(Married segment: appeal to shared use and family-oriented bundles)
+			(Single segment: focus on personal performance or solo travel/fitness-related gear)
+*/
+
+-- Average revenue per customer by marital status.
+select marital_status, round(avg(sales_amount), 2) as avg_revenue_per_cust
+from gold.fact_sales FS
+left join gold.dim_customers DC
+	on FS.customer_key = DC.customer_key
 group by marital_status;
--- Result: The business is largely comprised of customers who are married (54% of the total).
--- ==============================================================================================================================
+
+-- Result: Single customers spend more on average per transaction than married ones (about 14.5% higher).
+/*
+Insights:
+	The business can consider:
+		- creating premium product bundles tailored toward singles.
+		- offer exclusive discounts to married customers to raise their average purchase value.
+*/
+
+-- Product preference by marital status:
+SELECT 	DP.category,
+		DC.marital_status,
+        count(FS.customer_key) No_of_cust
+FROM gold.fact_sales FS
+left JOIN gold.dim_customers DC
+	ON FS.customer_key = DC.customer_key
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by 	DP.category,
+			DC.marital_status
+union all
+select 'Components', 'Married', 0
+union all
+select 'Components', 'Single', 0
+order by 	category,
+			marital_status;
+
+-- Result: Both groups love Accessories, but married customers are buying more overall (likely due to their larger population.)
+/*
+Insights:
+	Accessories is the category to double down on for both segments especially with bundles or upgrades.
+*/
+
+-- ====================================================================================================================================================================
 
 -- Find the total number of products by category.
 select category, count(product_name) Total_Products
 from gold.dim_products
 group by category;
--- Result: Here the 'Components' category has the most products while the 'Accessories' the least.
--- ==============================================================================================================================
+/* 
+Result: 
+	- The Components category has the largest variety of products (134), followed by Bikes (97).
+	- Accessories and Clothing have fewer distinct products, making them the smallest in terms of product variety.
+*/
 
--- What is the average cost for each category ?
-select category, round(avg(cost), 2) Avg_cost
-from gold.dim_products
-group by category
-order by Avg_cost desc;
--- Result: The 'Bikes' Category has the highest average cost by far. The 'Accessories' category has the lowest average cost. 
--- ==============================================================================================================================
 
--- What is the total revenue generated by each category ?
-select 	DP.category,
-		sum(FS.sales_amount) Total_Revenue
+-- Find the quantity sold from each category along with the respective category revenue.
+with cte_name as
+(select 	DP.category,
+        count(distinct DP.product_name) No_Of_Prod,
+		sum(FS.quantity) Total_Quantity,
+        sum(FS.sales_amount) Total_Rev
 from gold.fact_sales FS
 left join gold.dim_products DP
 	on FS.product_key = DP.product_key
 group by DP.category
-order by Total_Revenue desc;
+union all
+select 'Components', 0, 0, 0)
+select 	CN.category,
+		Total_Products TTL_Existing_Products,
+        No_Of_Prod Distinct_bought,
+        Total_Quantity TTL_Quantity_Bought,
+        Total_Rev TTL_Revenue
+from cte_name CN
+left join (select category, count(product_name) Total_Products
+from gold.dim_products
+group by category) DPP
+	on CN.category = DPP.category;
 /*
-	- 	The 'Bikes' category is BY FAR the best performing category in the business in terms of total revenue generated.
-		It generated 28.3 million over a period of 3 years.
-	- 	On the other hand, 'Components' was the worst performing category in the business in terms of total revenue generated.
-		It generated 0 revenue in the 3 year period.
-	- 	The 'Bikes' category disproportionately outperforms the other categories meaning that the business overly relies on
-		this category to generate revenue. If anything happens to this category, the business will be in danger of volatility.
+Reults & Insights:
+	- Bikes Are the Revenue Champions. (Highest revenue: $28.3M — over 40x more than Accessories or Clothing.)
+	- 88 of 97 bikes were purchased (91%), showing high product engagement.
+	- Even with fewer units sold than Accessories, Bikes dominate due to high average price per unit.
+	- Action: 	Bikes are likely the flagship products so it would be the businesses best interest to prioritize them
+				in marketing, performance tracking, and bundling strategies.
+	========================================================================
+    - Accessories drive volume, not value. 
+    (Most units sold(36,112) which is more than double Bikes or Clothing yet revenue(700K) is low compared to Bikes.)
+	- Only 22 of 29 Accessories were purchased (76%).
+	- Action: 	* 	Accessories are likely low-margin, high-volume items. So this category would be ideal
+					for promotions as impulse buys, cross-sells, or upsells with big-ticket items like Bikes.
+                *	The business should consider re-evaluating pricing of items in this category given
+					that the category is bringing in low revenue despite high number of units sold.
+                    (maybe the items are underpriced.)
+	=====================================================================================================
+    - Clothing shows moderate engagement. (20 of 35 products were bought (57%)).
+	- Revenue ($339K) and quantity (9,106) are modest but meaningful.
+	- Action: 	Clothing has room for optimization/product line trimming.
+				The business should focus on fast-movers and drop poor performers.
+	==============================================================================
+    - Components category is seriously underperforming. (134 products, yet 0 purchases.)
+	- Might not be part of the sales process yet, or there's a data issue, or they require installation/support not tracked as direct sales.
+
+	- Action: The business should carry out an investigation into whether:
+				Components sales info is captured by a different channel(other than 'CRM' % 'ERP').
+                Components are inactive SKUs.
+				
 */
--- ==============================================================================================================================
+-- ====================================================================================================================================================================
+
+-- Find the average cost, average price, total quantity purchased and total sales for each subcategory.
+select 	DP.category,
+		DP.subcategory,
+		round(avg(DP.cost), 2) Avg_Cost,
+        round(avg(FS.price), 2) Avg_Selling_Price,
+        sum(FS.quantity) TTL_Quantity_bought,
+        sum(DP.cost) Total_Cost,
+        sum(FS.sales_amount) Total_Sales,
+        (sum(FS.sales_amount) - sum(DP.cost)) Net_Profit
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.category, DP.subcategory
+order by Net_Profit desc;
+/*
+Result:
+	- Bikes dominate net profit. Road, Mountain, and Touring bikes alone generate over 11M in combined profit, dwarfing all other subcategories.
+	- Among accessories, Tires and Tubes, and Helmets are standout performers, each contributing over 140k in profit despite much lower unit costs.
+	- Clothing subcategories yield far smaller profits, though some (Shorts, Jerseys) still add meaningful amounts.
+	- Low-cost items like Bottles & Cages show strong profit margins relative to cost(lowest actually), hinting at effective markup strategies.
+		(The business is using smart pricing strategies to maximize earnings.)
+
+Insights: 
+	The business can consider:
+	- Focussing marketing on high-profit bikes. Road and Mountain bikes should be the centerpiece of premium marketing and financing offers.
+	- Leveraging accessories for upselling. High-volume accessories like Tires and Tubes could be bundled with bike purchases for incremental profit.
+	- Targeting Clothing cross-sales. Low-cost, high-margin clothing items (i.e. Shorts, Jerseys, Gloves) can be promoted at checkout to raise basket value.
+	- Ensuring top profit-driving SKUs (e.g., Road Bikes, Tires) have optimal stock levels year-round.
+	- Price Optimization. It can explore small price adjustments on high-volume accessories. 
+		(Even a 1–2 increase in price could significantly boost profits given their sales scale.)
+*/
+
+-- Find the Percentage profit margin for each subcategory
+with cte_name as
+(select DP.subcategory,
+		round(avg(DP.cost), 2) Avg_Cost,
+        round(avg(FS.price), 2) Avg_Price,
+        round((avg(FS.price) - avg(DP.cost)) / avg(DP.cost) * 100, 2) `%margin`,
+        sum(FS.quantity) TTL_Qty_Bought,
+        sum(FS.sales_amount) Rev_Generated,
+        sum(DP.cost) TTL_Cost,
+        sum(FS.sales_amount) - sum(DP.cost) Net_Profit
+from gold.fact_sales FS
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
+group by DP.subcategory
+order by `%margin` desc)
+
+select 	subcategory,
+		Avg_Cost,
+        Avg_Price,
+        TTL_Qty_Bought,
+        Rev_Generated,
+        TTL_Cost,
+        Net_Profit,
+        round((Net_Profit / TTL_Cost) * 100, 2) Percentage_profit
+from cte_name;
+/*
+Observations:
+	- Accessories & Clothing dominate the top 12 spots with margins over 160%, but they generally have lower total revenue compared to Bikes.
+	- Bikes have much lower margin percentages (57–78%) but huge total revenue, meaning they rely on volume and ticket size for profitability.
+	- Socks are the outlier at 200% margin, but are low in both sales volume and revenue contribution.
+	- Jerseys and Caps have notably low margins (30% and 28%), which are potential candidates for price optimization or supplier renegotiation.
+*/ 
+-- ====================================================================================================================================================================
 
 -- Find the total revenue generated by each customer.
-select customer_id, customer_name, country, gender, DC.marital_status, sum(sales_amount) Total_Revenue,
-		dense_rank() over (order by sum(sales_amount) desc) Overall_ranking
+with cte_name as
+(select DC.customer_id,
+		DC.customer_name,
+        DC.country,
+        DC.gender,
+        DC.marital_status,
+        sum(FS.sales_amount) Total_Revenue,
+		dense_rank() over (order by sum(FS.sales_amount) desc) Overall_ranking
 from gold.fact_sales FS
 left join gold.dim_customers DC
 	on FS.customer_key = DC.customer_key
-group by customer_id, customer_name, country, gender, marital_status
-order by Total_Revenue desc;
+group by 	DC.customer_id,
+			DC.customer_name,
+			DC.country,
+			DC.gender,
+			DC.marital_status
+order by Total_Revenue desc)
+select 	customer_id,
+		customer_name,
+        country,
+        gender,
+        marital_status,
+        Total_Revenue,
+		Overall_ranking
+from cte_name
+where Overall_ranking <= 20;
 
 /*
 	- 	The customers who have contributed the most to the overall revenue of the business are 'Kaitlyn Henderson'
-		and 'Nichole Nara' both tying at a total revenue of 13294. 
+		and 'Nichole Nara' both tying at an individual total revenue of 13294. 
 	- 	They are closely followed by 'Margaret He' and 'Randall Dominguez' in 2nd and 3rd place respectively.
     - 	Out of the top 10 customers that have generated the most revenue for the business, 7 are females
-		and coincidentally, all the 10 come from France. Also, 8 of the top 10 are married individuals.
+		and coincidentally, all the 10 come from France. (France has a substantial cluster of high-value repeat customers.)
+		Also, 8 of the top 10 are married individuals. These customers are too valuable to lose.
+        The business might want to consider personalized offers, early access, or rewards to these customers.
+	- The spread between rank 1 (13,294) and rank 20 (10,799) is only 2.5K difference, so this is a tight elite group.
 */
--- ==============================================================================================================================
+-- ====================================================================================================================================================================
 
 -- What is the distribution of sold items across countries ?
-select DC.country, sum(quantity) Total_Quantity_Sold, sum(FS.sales_amount) Total_Revenue
+select 	DC.country,
+		sum(quantity) TTL_Quantity_Bought,
+        sum(DP.cost) TTL_Cost,
+        sum(FS.sales_amount) TTL_Revenue,
+        sum(FS.sales_amount) - sum(DP.cost) Net_Profit,
+        concat(round(((sum(FS.sales_amount) - sum(DP.cost)) / sum(DP.cost)) * 100, 2), '%') Percentage_Profit
 from gold.fact_sales FS
 left join gold.dim_customers DC
 	on FS.customer_key = DC.customer_key
+left join gold.dim_products DP
+	on FS.product_key = DP.product_key
 group by DC.country
-order by Total_Quantity_Sold desc;
+order by TTL_Quantity_Bought desc;
 
 /*
-	- United States leads this one with 20481 total products being sold to her.
-    - On the other hand, France was the least consumer of the businesses products with 5559 total purchased products.
+Results:
+	- United States dominates in quantity and revenue. 
+		* Quantity sold: 20,481 units. (the highest by far.)
+		* Revenue: 9.16M (leads all countries.)
+		* Profit margin: 68.21%, which is strong despite such high volume.
+		* This suggests a strong, high-margin customer base in the US.
+
+	- Australia is nearly tied with the US in revenue but with fewer units.
+		* Quantity sold: 13,346 units (about 35% fewer than the US).
+		* Revenue: 9.06M (almost identical to the US despite lower volume.)
+		* This implies higher average selling price per unit in Australia.
+
+	- Canada is quite efficient in profitability.
+		* Quantity sold: 7,630 units (far lower than US and Australia.)
+		* Despite Canada having the highest profit margin(69.62%), it brought in the least revenue as compared to the other countries.
+
+	- UK, Germany, and France are mid-tier players.
+		* All three have sales volumes between 5,500–6,900 and profit margins in the 65% range.
+		* These markets are steady but not breaking into top-tier performance like US/Australia.
+
+Strategic implications:
+	* In US & Australia → Maintain focus, but investigate pricing in Australia to understand how fewer sales yield similar revenue.
+	* Canada → its 'pricing and cost discipline' model can be applied to other countries in order to boost profit margins.
+	* UK/Germany/France → Potential growth markets, but may need marketing or product push to increase volumes.
 */
 
 /*
-=================================================================================================================================
+=======================================================================================================================================================================
 */
