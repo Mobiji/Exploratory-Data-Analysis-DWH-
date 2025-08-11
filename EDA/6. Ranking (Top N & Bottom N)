@@ -1,7 +1,7 @@
 /*
-=================================================================================================================================
+=======================================================================================================================================================================
 		RANKING (TOP N & BOTTOM N) ANALYSIS
-=================================================================================================================================
+=======================================================================================================================================================================
 */
 
 /*
@@ -13,70 +13,142 @@
                     - Bottom 5 customers by total orders etc.
 */
 
--- Which 5 products generate the highest revenue ?
-select 	DP.product_name, DP.category, DP.production_line, DP.maintenance, sum(sales_amount) TotalRev_generated,
+-- Which 5 products generate the highest revenue?
+with cte_name as
+(select	DP.product_name,
+		DP.category,
+        DP.subcategory,
+        DP.production_line,
+        DP.maintenance,
+		sum(FS.quantity) TTL_Quantity,
+        sum(DP.cost) TTL_Cost,
+        sum(sales_amount) TotalRev_generated,
 		dense_rank() over(order by sum(sales_amount) desc) Ranking
 from gold.fact_sales FS
 left join gold.dim_products DP
 	on FS.product_key = DP.product_key
-group by DP.product_name, DP.category, DP.production_line, DP.maintenance
-limit 5;
+group by 	DP.product_name,
+			DP.category,
+			DP.subcategory,
+            DP.production_line,
+            DP.maintenance
+limit 5)
+
+select 	product_name, 
+		category,
+        subcategory,
+        maintenance,
+        TTL_Quantity,
+        TTL_Cost,
+        TotalRev_generated,
+		TotalRev_generated - TTL_Cost Net_Profit,
+        round((TotalRev_generated - TTL_Cost) / TTL_Cost * 100, 2) Percentage_Profit,
+        Ranking
+from cte_name;
 
 /*
-	- The 'Mountain-200' bike is the biggest revenue generator in the business.
+Results:
+	- It’s clear that the Mountain-200 bike line dominates the highest-revenue list. All top 5 are just different color-size variants of the same model.
       (specifically the 'Black-46' with a total revenue of about 1.37 million)
+  
+  Here’s what jumps out:
+	- Same category & subcategory dominance (All are Bikes, Mountain Bikes from the Mountain production line.)
+		This means the high-revenue leadership isn’t spread across categories but rather concentrated in one product family.
+	- Very consistent profitability.
+		(Percentage profit margins range from 76.94% to 77.70%, showing tight control over pricing and costs.)
+	- Maintenance = Yes.
+		(Every top performer requires maintenance. This could mean additional after-sales revenue streams (parts, servicing).)
+        (There’s likely a recurring customer relationship beyond the initial purchase.)
+	- Strategic risk.
+		(Dependence on one product line for top revenue is a double-edged sword. If demand shifts or a competitor launches
+        a disruptive mountain bike model, a huge chunk of sales could be at risk.)
+Actionable Insight:
+	It would be in the businesses best interest to leverage the Mountain-200's strong reputation to upsell accessories like
+		helmets, stands or hydration packs which I have previously seen have high margins from earlier analysis.
 */
--- ==============================================================================================================================
+-- ====================================================================================================================================================================
 
--- What are the 5 worst-performing products in terms of sales ?
-select 	DP.product_name, DP.category, DP.production_line, DP.maintenance, sum(sales_amount) TotalRev_generated,
-		dense_rank() over(order by sum(sales_amount)) Ranking
+-- What are the 5 worst-performing products in terms of sales?
+with cte_name as
+(select	DP.product_name,
+		DP.category,
+        DP.subcategory,
+        DP.production_line,
+        DP.maintenance,
+		sum(FS.quantity) TTL_Quantity,
+        sum(DP.cost) TTL_Cost,
+        sum(sales_amount) TotalRev_generated,
+		dense_rank() over(order by sum(sales_amount) asc) Ranking
 from gold.fact_sales FS
 left join gold.dim_products DP
 	on FS.product_key = DP.product_key
-group by DP.product_name, DP.category, DP.production_line, DP.maintenance
-limit 5;
+group by 	DP.product_name,
+			DP.category,
+			DP.subcategory,
+            DP.production_line,
+            DP.maintenance
+limit 5)
+
+select 	product_name, 
+		category,
+        subcategory,
+        maintenance,
+        TTL_Quantity,
+        TTL_Cost,
+        TotalRev_generated,
+		TotalRev_generated - TTL_Cost Net_Profit,
+        round((TotalRev_generated - TTL_Cost) / TTL_Cost * 100, 2) Percentage_Profit,
+        Ranking
+from cte_name;
 /*
-	- The worst performing product in terms of total revenue generated is 'Racing Socks- L' with 2430 in total sales.
+Results:
+	Here’s what stands out from this bottom-5 products analysis:
+		- Low revenue ≠ low margin.
+			Even though these are the lowest revenue generators, their profit margins are surprisingly high. (All are well over 100%, with socks hitting 200%.)
+			This means the issue isn’t pricing or margin structure, it’s sales volume.
+		- Socks dominating the bottom tier,
+			'Racing Socks – L' and 'Racing Socks – M' are the bottom two performers in total revenue, despite having extremely high profit margins.
+            This suggests awareness or demand generation is the problem. (Maybe these are seen as 'add-on' items, not primary purchases.)
+
+Follow-up actions for the business:
+	* Bundling: Bundle these low-volume, high-margin items with higher-selling products (e.g., include socks with bike purchases, patch kits with tire sales).
+	* Placement: Feature these in checkout positions or as recommended accessories online.
+	* Promotions: Since margins are high, the busines has flexibility for discounts or 'Buy One Get One' without hurting profitability.
 */
--- ==============================================================================================================================
+-- ====================================================================================================================================================================
 
--- Which category generates the highest revenue ?
-select DP.category, sum(sales_amount) TotalRev_generated
-from gold.fact_sales FS
-left join gold.dim_products DP
-	on FS.product_key = DP.product_key
-group by DP.category
-order by TotalRev_generated desc
-limit 1;
--- Result: 'Bikes' is the largest revenue generator in the business.
--- ==============================================================================================================================
-
--- Which category generates the lowest revenue ?
-select DP.category, sum(sales_amount) TotalRev_generated
-from gold.fact_sales FS
-left join gold.dim_products DP
-	on FS.product_key = DP.product_key
-group by DP.category
-order by TotalRev_generated
-limit 1;
--- Result: 'Clothing' is the least revenue generator in the business.
--- ==============================================================================================================================
-
--- Find the top 3 customers with the most orders placed.
-select 	DC.customer_id, DC.customer_name, DC.country, DC.gender, DC.marital_status,
+-- Find the top 15 customers with the most orders placed.
+select 	DC.customer_id,
+		DC.customer_name,
+        DC.country,
+        DC.gender,
+        DC.marital_status,
 		count(distinct order_number) Total_Orders_Placed,
         sum(FS.sales_amount) Total_Revenue,
         dense_rank() over(order by count(distinct order_number) desc, sum(FS.sales_amount) desc) Ranking
 from gold.fact_sales FS
 left join gold.dim_customers DC
 	on FS.customer_key = DC.customer_key
-group by DC.customer_id, DC.customer_name, DC.country, DC.gender, DC.marital_status
-limit 3;
--- The customer 'Mason Roberts' from Canada has placed the most orders in the business.
--- This doesn't directly mean that he generated the most revenue for the business.
--- ==============================================================================================================================
+group by 	DC.customer_id,
+			DC.customer_name,
+            DC.country,
+            DC.gender,
+            DC.marital_status
+limit 15;
+/*
+Results:
+	- Canada Dominates the Leaderboard.
+		* 14 out of the top 15 customers are from Canada. (Suggests either a loyal customer base.)
+	- High Order Count, but Low Revenue per Order.
+		* Even the top spot (Mason Roberts) has 28 orders but only $1,317 in total revenue.
+		* This implies average order value (AOV) is quite low (roughly $47/order) for the leader.
+		* These customers may be buying low-ticket, frequently needed products.
+	- Tight Competition at the Top.
+		* Many customers have the same order count (27 orders), so the revenue decides their rank.
+		* The spread in revenue between #3 (Ashley Henderson) and #13 (Nancy Chapman) is only about $629,
+		  meaning even a small change in purchasing behavior could shift ranks.
+*/
 
 /*
-=================================================================================================================================
+=======================================================================================================================================================================
 */
